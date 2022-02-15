@@ -26,6 +26,7 @@ class TestADTrustHbac(object):
          through hbac is able to login
         :id: 401fb710-b876-4693-92d0-86a75b94973f
         """
+        time.sleep(3600)
         ipa_server_tools = ipaTools(multihost.master[0])
         ipa_client = sssdTools(multihost.client[0])
         ipa_server = sssdTools(multihost.master[0])
