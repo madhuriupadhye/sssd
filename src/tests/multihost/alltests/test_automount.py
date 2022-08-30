@@ -55,6 +55,7 @@ class Testautofsresponder(object):
                 pytest.fail("Unable to start %s service" % service)
             time.sleep(5)
         try:
+            time.sleep(18000)
             multihost.client[0].run_command(['automount', '-m'])
         except subprocess.CalledProcessError:
             pytest.fail("automount -m command failed")
