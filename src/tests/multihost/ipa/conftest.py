@@ -7,6 +7,7 @@ import os
 import posixpath
 import pexpect
 import pytest
+import time
 from sssd.testlib.common.qe_class import session_multihost
 from sssd.testlib.common.utils import sssdTools
 from sssd.testlib.ipa.utils import ipaTools
@@ -430,6 +431,7 @@ def setup_ipa_client(session_multihost, request):
                                                          "admin")
     client_install_cmd = "ipa-client-install %s" % options
     try:
+        time.sleep(21600)
         session_multihost.client[0].run_command(client_install_cmd)
     except subprocess.CalledProcessError:
         pytest.fail("ipa client install failed")
