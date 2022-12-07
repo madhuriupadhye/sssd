@@ -16,7 +16,12 @@ from sssd.testlib.common.expect import pexpect_ssh
 from sssd.testlib.common.exceptions import SSHLoginException
 from sssd.testlib.common.utils import sssdTools, LdapOperations
 from constants import ds_instance_name
+import os
 
+def execute_cmd(multihost, command):
+    """ Backup and restore sssd.conf """
+    cmd = multihost.client[0].run_command(command)
+    return cmd
 
 @pytest.mark.usefixtures('setup_sssd', 'create_posix_usersgroups'
                          )
@@ -115,55 +120,73 @@ class TestMisc(object):
         :bugzilla:
          https://bugzilla.redhat.com/show_bug.cgi?id=1854317
         """
-        tools = sssdTools(multihost.client[0])
-        domain_name = tools.get_domain_section_name()
-        client = sssdTools(multihost.client[0])
-        domain_params = {'cache_credentials': 'true',
+        try:
+            tools = sssdTools(multihost.client[0])
+            domain_name = tools.get_domain_section_name()
+            client = sssdTools(multihost.client[0])
+            domain_params = {'cache_credentials': 'true',
                          'entry_cache_timeout': '5400',
                          'refresh_expired_interval': '4000'}
-        client.sssd_conf(f'domain/{domain_name}', domain_params)
-        multihost.client[0].service_sssd('restart')
-        user = 'foo1@%s' % domain_name
-        client = pexpect_ssh(multihost.client[0].sys_hostname, user,
-                             'Secret1234', debug=False)
-        with pytest.raises(SSHLoginException):
-            client.login(login_timeout=10,
-                         sync_multiplier=1, auto_prompt_reset=False)
-        time.sleep(2)
-        client = pexpect_ssh(multihost.client[0].sys_hostname, user,
-                             'Secret123', debug=False)
-        try:
-            client.login(login_timeout=30,
-                         sync_multiplier=5, auto_prompt_reset=False)
-        except SSHLoginException:
-            pytest.fail("%s failed to login" % user)
-        else:
-            client.logout()
-
-        for _ in range(3):
+            client.sssd_conf(f'domain/{domain_name}', domain_params)
+            client.sssd_conf("sssd", {'enable_files_domain': 'true'}, action='update')
+            multihost.client[0].service_sssd('restart')
+            user = 'foo1@%s' % domain_name
             client = pexpect_ssh(multihost.client[0].sys_hostname, user,
-                                 'Secret1234', debug=False)
+                             'Secret1234', debug=False)
             with pytest.raises(SSHLoginException):
                 client.login(login_timeout=10,
-                             sync_multiplier=1, auto_prompt_reset=False)
-        time.sleep(2)
-        client = pexpect_ssh(multihost.client[0].sys_hostname, user,
+                         sync_multiplier=1, auto_prompt_reset=False)
+            time.sleep(2)
+            client = pexpect_ssh(multihost.client[0].sys_hostname, user,
                              'Secret123', debug=False)
-        try:
-            client.login(login_timeout=30,
+            try:
+                client.login(login_timeout=30,
                          sync_multiplier=5, auto_prompt_reset=False)
-        except SSHLoginException:
-            pytest.fail("%s failed to login" % user)
-        else:
-            client.logout()
-        time.sleep(2)
-        cmd_id = 'id %s' % user
-        cmd = multihost.client[0].run_command(cmd_id)
-        if "no such user" in cmd.stdout_text:
-            status = "FAIL"
-        else:
-            status = "PASS"
-        assert status == "PASS"
+            except SSHLoginException:
+                pytest.fail("%s failed to login" % user)
+            else:
+                client.logout()
+
+            for _ in range(3):
+                client = pexpect_ssh(multihost.client[0].sys_hostname, user,
+                                 'Secret1234', debug=False)
+                with pytest.raises(SSHLoginException):
+                    client.login(login_timeout=10,
+                             sync_multiplier=1, auto_prompt_reset=False)
+            time.sleep(2)
+            client = pexpect_ssh(multihost.client[0].sys_hostname, user,
+                             'Secret123', debug=False)
+            try:
+                client.login(login_timeout=30,
+                         sync_multiplier=5, auto_prompt_reset=False)
+            except SSHLoginException:
+                pytest.fail("%s failed to login" % user)
+            else:
+                client.logout()
+            time.sleep(2)
+            cmd_id = 'id %s' % user
+            cmd = multihost.client[0].run_command(cmd_id)
+            if "no such user" in cmd.stdout_text:
+                status = "FAIL"
+            else:
+                status = "PASS"
+            assert status == "PASS"
+        except:
+            test_name = 'test_error_2006_0032'
+            file_location = f'/tmp/{test_name}'
+            execute_cmd(multihost, f"mkdir {file_location}")
+            execute_cmd(multihost, f'cp -vf /var/log/sssd/* {file_location}')
+            os.system(f'mkdir logs')
+            os.system(f'mkdir ./logs/{test_name}')
+            for i in execute_cmd(multihost, f'ls {file_location}').stdout_text.split():
+                remote_location = file_location + '/' + i
+                local_location = f'./logs/{test_name}/{i}'
+                log = multihost.client[0].get_file_contents(remote_location).decode('utf-8')
+                os.system(f"touch {local_location}")
+                for i in log.split('\n'):
+                    with open(local_location, "a") as text_file:
+                        text_file.write(i + '\n')
+                        text_file.close()
 
     @pytest.mark.tier1
     def test_0004_sssd_api_conf(self, multihost, backupsssdconf):
@@ -479,3 +502,4 @@ class TestMisc(object):
         assert "Failed to connect to '/var/lib/sss/db/config.ldb'" \
             not in log_str
         assert "The confdb initialization failed" not in log_str
+
