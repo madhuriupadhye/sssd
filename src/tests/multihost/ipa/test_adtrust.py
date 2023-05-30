@@ -650,6 +650,7 @@ class TestADTrust(object):
                                         f'/var/log/sssd/sssd_{domain_name}.log')
 
     @staticmethod
+    @pytest.mark.m3
     def test_skip_members_in_view_search(multihost):
         """
         :title: Skip group members that point to an entry in the views base search
