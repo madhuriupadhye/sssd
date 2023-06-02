@@ -134,6 +134,7 @@ class TestADTrust(object):
         assert "retcode:0" in sudo_out_3, "sudo -l failed"
 
     @staticmethod
+    @pytest.mark.m2
     def test_adusrname_beginning_with_at_rate_sign(multihost):
         """
         :title: AD_username beginning with @ sign
