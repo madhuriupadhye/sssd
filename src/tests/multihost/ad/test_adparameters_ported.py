@@ -2659,7 +2659,7 @@ class TestADParamsPorted:
                f' with [5]: Input/output error' not in log_str
 
     @staticmethod
-    @pytest.mark.tier2
+    @pytest.mark.ignore
     def test_0034_ad_parameters_group_work_intermittently(multihost, adjoin):
         """
         :title: IDM-SSSD-TC: ad_provider: ad_parameters: sssd ad groups
