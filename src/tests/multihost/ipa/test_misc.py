@@ -20,7 +20,7 @@ from sssd.testlib.common.ssh2_python import run_command_client
 
 
 @pytest.mark.usefixtures('default_ipa_users', 'reset_password')
-@pytest.mark.tier1
+@pytest.mark.tier4
 class Testipabz(object):
     """ IPA BZ Automations """
 
@@ -331,7 +331,9 @@ class Testipabz(object):
         multihost.client[0].run_command(
             f'su -l {user} -c "ipa sudorule-add-user testrule2 --users admin"',
             raiseonerr=False)
-        run_command_client(multihost, user, test_password, "sudo -l")
+        #run_command_client(multihost, user, test_password, "sudo -l")
+        output = multihost.client[0].run_command(f'su -l {user} -c "sudo -l"',stdin_text="Secret123", raiseonerr=False)
+        assert output.returncode == 0
         time.sleep(3)
         search = multihost.client[0].run_command(
             'fgrep gssapi_ /var/log/sssd/sssd_pam.log | tail -10')
@@ -343,8 +345,9 @@ class Testipabz(object):
         multihost.client[0].run_command(
             f'su -l {user} -c "kinit admin"', stdin_text=test_password,
             raiseonerr=False)
-        run_command_client(multihost, user, test_password, "sudo -l")
-
+        #run_command_client(multihost, user, test_password, "sudo -l")
+        output1 = multihost.client[0].run_command(f'su -l {user} -c "sudo -l"',stdin_text="Secret123", raiseonerr=False)
+        assert output1.returncode == 0
         multihost.client[0].run_command(
             f'su -l {user} -c "klist"', raiseonerr=False)
         multihost.client[0].run_command(
@@ -419,9 +422,11 @@ class Testipabz(object):
         multihost.client[0].run_command(
             f'su -l {user} -c "sudo -S -l"', stdin_text=test_password,
             raiseonerr=False)
-        result = run_command_client(multihost, user, test_password,
-                                    'echo -e "Secret123" | sudo -S /usr/sbin/sssctl domain-list')
-        assert domain_name in result
+        #result = run_command_client(multihost, user, test_password,
+        #                            'echo -e "Secret123" | sudo -S /usr/sbin/sssctl domain-list')
+        #assert domain_name in result
+        output = multihost.client[0].run_command(f'su -l {user} -c "echo -e "Secret123" | sudo -S /usr/sbin/sssctl domain-list"',stdin_text="Secret123", raiseonerr=False)
+        assert domain_name in output.stdout_text
 
     @staticmethod
     def test_ssh_hash_knownhosts(multihost, reset_password, backupsssdconf):
