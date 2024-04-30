@@ -1,0 +1,94 @@
+[root@client ~]# ipa user-add user1 --first=user1 --last=user1 --user-auth-type=passkey
+------------------
+Added user "user1"
+------------------
+  User login: user1
+  First name: user1
+  Last name: user1
+  Full name: user1 user1
+  Display name: user1 user1
+  Initials: uu
+  Home directory: /home/user1
+  GECOS: user1 user1
+  Login shell: /bin/sh
+  Principal name: user1@IPA.TEST
+  Principal alias: user1@IPA.TEST
+  Email address: user1@ipa.test
+  UID: 81000005
+  GID: 81000005
+  User authentication types: passkey
+  Password: False
+  Member of groups: ipausers
+  Kerberos keys available: False
+[root@client ~]# sssctl passkey-register --username=user1 --domain=ipa.test
+Enter PIN:
+
+Please touch the device.
+passkey:0ehfa0Ss3GW805iF1BZyCwC9UnVZ02EHXTcIynGvRWKXXpS0YJsPFS8xFABvVD/jQqaOE7mtWTIlZ35i0gsGeQ==,MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAENZfZpKSk06f16IeI8BzD5XDD+Y2HR+pixVyfmk9SB2rtqOEOQbfm4giFvbS/AsMOVqZU4/4JLYINPN8aPJcJNw==
+[root@client ~]# ipa user-add-passkey user1 passkey:0ehfa0Ss3GW805iF1BZyCwC9UnVZ02EHXTcIynGvRWKXXpS0YJsPFS8xFABvVD/jQqaOE7mtWTIlZ35i0gsGeQ==,MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAENZfZpKSk06f16IeI8BzD5XDD+Y2HR+pixVyfmk9SB2rtqOEOQbfm4giFvbS/AsMOVqZU4/4JLYINPN8aPJcJNw==
+--------------------------------------
+Added passkey mappings to user "user1"
+--------------------------------------
+  User login: user1
+  Passkey mapping: passkey:0ehfa0Ss3GW805iF1BZyCwC9UnVZ02EHXTcIynGvRWKXXpS0YJsPFS8xFABvVD/jQqaOE7mtWTIlZ35i0gsGeQ==,MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAENZfZpKSk06f16IeI8BzD5XDD+Y2HR+pixVyfmk9SB2rtqOEOQbfm4giFvbS/AsMOVqZU4/4JLYINPN8aPJcJNw==
+[root@client ~]# su - ci
+[ci@client ~]$ su - user1@ipa.test
+Kerberos TGT will not be granted upon login, user experience will be affected.
+Insert your passkey device, then press ENTER.
+Enter PIN:
+No Kerberos TGT granted as the server does not support this method. Your single-sign on(SSO) experience will be affected.
+Creating home directory for user1@ipa.test.
+-sh-5.2$ exi
+-sh: exi: command not found
+-sh-5.2$ exit
+logout
+[ci@client ~]$ umockdev-record /dev/hidraw1 > /tmp/hidraw1.device
+[ci@client ~]$ exit
+logout
+[root@client ~]# ls /tmp/
+.ICE-unix/                                                                        systemd-private-9d192f8c5ef640768cbaefdd18061e16-dbus-broker.service-HBFwT4/
+.X11-unix/                                                                        systemd-private-9d192f8c5ef640768cbaefdd18061e16-polkit.service-8cPTuD/
+.XIM-unix/                                                                        systemd-private-9d192f8c5ef640768cbaefdd18061e16-systemd-logind.service-qYgHkf/
+.font-unix/                                                                       systemd-private-9d192f8c5ef640768cbaefdd18061e16-systemd-oomd.service-eBvEpw/
+hidraw1.device                                                                    systemd-private-9d192f8c5ef640768cbaefdd18061e16-systemd-resolved.service-kOsgjy/
+[root@client ~]# LD_PRELOAD=/opt/random.so umockdev-run --device /tmp/hidraw1.device --script /dev/hidraw1=/tmp/hidraw1.script --ioctl /dev/hidraw1=/tmp/hidraw1.^Cctl -- bash -c 'env | grep ^UMOCKDEV_ > /etc/sysconfig/sssd; printf "LD_PRELOAD=$LD_PRELOAD" >> /etc/sysconfig/sssd; systemctl restart sssd; chmod -R a+rwx $UMOCKDEV_DIR; su - ci -c "su - user1@ipa.test -c whoami"'
+
+[root@client ~]# su - ci
+Last login: Tue Apr 30 20:51:50 UTC 2024 on pts/0
+[ci@client ~]$ su - user1
+su: user user1 does not exist or the user entry does not contain all the required fields
+[ci@client ~]$ exit
+logout
+[root@client ~]# vim /etc/sssd/sssd.conf 
+[root@client ~]# systemctl restart sssd
+[root@client ~]# su - ci
+Last login: Tue Apr 30 20:53:36 UTC 2024 on pts/0
+[ci@client ~]$ su - user1
+Kerberos TGT will not be granted upon login, user experience will be affected.
+Insert your passkey device, then press ENTER.
+Enter PIN:
+No Kerberos TGT granted as the server does not support this method. Your single-sign on(SSO) experience will be affected.
+Last login: Tue Apr 30 20:52:16 UTC 2024 on pts/0
+-sh-5.2$ exit
+logout
+[ci@client ~]$ LD_PRELOAD=/opt/random.so umockdev-run --device /tmp/hidraw1.device --script /dev/hidraw1=/tmp/hidraw1.script --ioctl /dev/hidraw1=/tmp/hidraw1.ictl -- bash -c 'env | grep ^UMOCKDEV_ > /etc/sysconfig/sssd; printf "LD_PRELOAD=$LD_PRELOAD" >> /etc/sysconfig/sssd; systemctl restart sssd; chmod -R a+rwx $UMOCKDEV_DIR; su - ci -c "su - user1 -c whoami"'^C
+[ci@client ~]$ ls /tmp/
+hidraw1.device                                                               systemd-private-9d192f8c5ef640768cbaefdd18061e16-systemd-logind.service-qYgHkf
+systemd-private-9d192f8c5ef640768cbaefdd18061e16-dbus-broker.service-HBFwT4  systemd-private-9d192f8c5ef640768cbaefdd18061e16-systemd-oomd.service-eBvEpw
+systemd-private-9d192f8c5ef640768cbaefdd18061e16-polkit.service-8cPTuD       systemd-private-9d192f8c5ef640768cbaefdd18061e16-systemd-resolved.service-kOsgjy
+[ci@client ~]$ ^C LD_PRELOAD=/opt/random.so umockdev-record --script /dev/hidraw1=/tmp/hidraw1.script --ioctl /dev/hidraw1=/tmp/hidraw1.ioctl -- bash -c 'env | grep ^UMOCKDEV_ > /etc/sysconfig/sssd; printf "LD_PRELOAD=$LD_PRELOAD" >> /etc/sysconfig/sssd; systemctl restart sssd; chmod -R a+rwx $UMOCKDEV_DIR; su - ci -c "su - user1 -c whoami"'
+[ci@client ~]$ exit
+logout
+[root@client ~]# LD_PRELOAD=/opt/random.so umockdev-record --script /dev/hidraw1=/tmp/hidraw1.script --ioctl /dev/hidraw1=/tmp/hidraw1.ioctl -- bash -c 'env | grep ^UMOCKDEV_ > /etc/sysconfig/sssd; printf "LD_PRELOAD=$LD_PRELOAD" >> /etc/sysconfig/sssd; systemctl restart sssd; chmod -R a+rwx $UMOCKDEV_DIR; su - ci -c "su - user1 -c whoami"'
+Kerberos TGT will not be granted upon login, user experience will be affected.
+Insert your passkey device, then press ENTER.
+Enter PIN:
+No Kerberos TGT granted as the server does not support this method. Your single-sign on(SSO) experience will be affected.
+user1
+[root@client ~]# LD_PRELOAD=/opt/random.so umockdev-run --device /tmp/hidraw1.device --script /dev/hidraw1=/tmp/hidraw1.script --ioctl /dev/hidraw1=/tmp/hidraw1.ioctl -- bash -c 'env | grep ^UMOCKDEV_ > /etc/sysconfig/sssd; printf "LD_PRELOAD=$LD_PRELOAD" >> /etc/sysconfig/sssd; systemctl restart sssd; chmod -R a+rwx $UMOCKDEV_DIR; su - ci -c "su - user1 -c whoami"'
+Kerberos TGT will not be granted upon login, user experience will be affected.
+Insert your passkey device, then press ENTER.
+Enter PIN:
+No Kerberos TGT granted as the server does not support this method. Your single-sign on(SSO) experience will be affected.
+user1
+

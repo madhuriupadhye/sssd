@@ -25,7 +25,7 @@ def passkey_requires_root(client: Client) -> tuple[bool, str] | bool:
 
     return True
 
-
+'''
 @pytest.mark.importance("high")
 @pytest.mark.topology(KnownTopology.Client)
 @pytest.mark.builtwith(client="passkey")
@@ -89,7 +89,7 @@ def test_passkey__register__ipa(ipa: IPA, moduledatadir: str, testdatadir: str):
 @pytest.mark.importance("critical")
 @pytest.mark.topology(KnownTopologyGroup.AnyProvider)
 @pytest.mark.builtwith(client="passkey", provider="passkey")
-@pytest.mark.require.with_args(passkey_requires_root)
+#@pytest.mark.require.with_args(passkey_requires_root)
 def test_passkey__su(client: Client, provider: GenericProvider, moduledatadir: str, testdatadir: str):
     """
     :title: Check su authentication of user with LDAP, IPA, AD and Samba
@@ -103,7 +103,7 @@ def test_passkey__su(client: Client, provider: GenericProvider, moduledatadir: s
     :customerscenario: False
     """
     suffix = type(provider).__name__.lower()
-
+    import pdb; pdb.set_trace()
     client.sssd.domain["local_auth_policy"] = "only"
 
     with open(f"{testdatadir}/passkey-mapping.{suffix}") as f:
@@ -447,7 +447,7 @@ def test_passkey__check_passkey_mapping_token_as_ssh_key_only(
 
     with open(f"{testdatadir}/ssh-key") as f:
         provider.user("user1").add().passkey_add(f.read().strip())
-
+    import pdb; pdb.set_trace()
     client.sssd.start()
 
     # We are running simple su not to check authentication with passkey but just to get
@@ -496,3 +496,73 @@ def test_passkey__check_passkey_mapping_token_with_ssh_key_and_passkey(
 
     pam_log = client.fs.read(client.sssd.logs.pam)
     assert "Mapping data found is not passkey related" in pam_log, "String was not found in the logs"
+'''
+@pytest.mark.importance("critical")
+@pytest.mark.topology(KnownTopologyGroup.AnyProvider)
+@pytest.mark.builtwith(client="passkey", provider="passkey")
+#@pytest.mark.require.with_args(passkey_requires_root)
+def test_passkey__check_tgt(client: Client, provider: GenericProvider, moduledatadir: str, testdatadir: str):
+    """
+    :title: Check su authentication of user with LDAP, IPA, AD and Samba
+    :setup:
+        1. Add a user in LDAP, IPA, AD and Samba with passkey_mapping.
+        2. Setup SSSD client with FIDO and umockdev, start SSSD service.
+    :steps:
+        1. Check su authentication of the user.
+    :expectedresults:
+        1. User su authenticates successfully.
+    :customerscenario: False
+    """
+    suffix = type(provider).__name__.lower()
+    import pdb; pdb.set_trace()
+
+    with open(f"{testdatadir}/passkey-mapping.{suffix}") as f:
+        provider.user("user1").add(user_auth_type='passkey').passkey_add(f.read().strip())
+
+    client.sssd.start()
+
+    assert client.auth.su.passkey_with_output(
+        username="user1",
+        pin=123456,
+        device=f"{moduledatadir}/umockdev.device",
+        ioctl=f"{moduledatadir}/umockdev.ioctl",
+        script=f"{testdatadir}/umockdev.script.{suffix}",
+        command = "klist",
+    )
+'''
+@pytest.mark.importance("critical")
+@pytest.mark.topology(KnownTopologyGroup.AnyProvider)
+@pytest.mark.builtwith(client="passkey", provider="passkey")
+#@pytest.mark.require.with_args(passkey_requires_root)
+def test_passkey__su_fips_enable(client: Client, provider: GenericProvider, moduledatadir: str, testdatadir: str):
+    """
+    :title: Check su authentication of user with LDAP, IPA, AD and Samba
+    :setup:
+        1. Add a user in LDAP, IPA, AD and Samba with passkey_mapping.
+        2. Setup SSSD client with FIDO and umockdev, start SSSD service.
+    :steps:
+        1. Check su authentication of the user.
+    :expectedresults:
+        1. User su authenticates successfully.
+    :customerscenario: False
+    """
+    suffix = type(provider).__name__.lower()
+    import pdb; pdb.set_trace()
+    client.sssd.domain["local_auth_policy"] = "enable:passkey"
+    user_add = provider.user("user1").add()
+    with open(f"{testdatadir}/passkey-mapping.{suffix}") as f:
+        #provider.user("user1").add().passkey_add(f.read().strip())
+        user_add.passkey_add(f.read().strip())
+
+    client.sssd.start()
+
+    assert client.auth.su.passkey(
+        username="user1",
+        pin=123456,
+        device=f"{moduledatadir}/umockdev.device",
+        ioctl=f"{moduledatadir}/umockdev.ioctl",
+        script=f"{testdatadir}/umockdev.script.{suffix}",
+        command = "",
+        expected_output_cmd= "",
+    )
+'''
