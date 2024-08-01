@@ -704,3 +704,54 @@ def test_passkey__su_with_12_mappings(
         )
         in output
     ), "Get the console message about TGT"
+
+
+@pytest.mark.importance("critical")
+@pytest.mark.topology(KnownTopology.IPA)
+@pytest.mark.builtwith(client="passkey", ipa="passkey")
+@pytest.mark.ticket(gh=6931)
+@pytest.mark.require.with_args(passkey_requires_root)
+def test_passkey__prompt_options(
+    client: Client, ipa: IPA, moduledatadir: str, testdatadir: str, umockdev_ipaotpd_update
+):
+    """
+    :title: Check authentication of user with IPA server when passkey mappings are 12 for a user
+    :setup:
+        1. Add a user with --user-auth-type=passkey in the server with 12 passkey mappings.
+        2. Setup SSSD client with FIDO and umockdev, start SSSD service.
+    :steps:
+        1. Check authentication of the user.
+        2. Check the TGT of user.
+        3. Check that the user isn't informed about the degraded user experience due to not obtaining the TGT ticket.
+    :expectedresults:
+        1. User authenticates successfully.
+        2. Get TGT after authentication of user.
+        3. Not getting the message after authentication.
+    :customerscenario: False
+    """
+    user_add = ipa.user("user1").add(user_auth_type="passkey")
+
+    for n in range(1, 13):
+        with open(f"{testdatadir}/passkey-mapping.ipa{n}") as f:
+            user_add.passkey_add(f.read().strip())
+
+    client.sssd.start()
+
+    rc, _, output, _ = client.auth.su.passkey_with_output(
+        username="user1",
+        pin=123456,
+        device=f"{moduledatadir}/umockdev.device",
+        ioctl=f"{moduledatadir}/umockdev.ioctl",
+        script=f"{testdatadir}/umockdev.script.ipa",
+        command="klist",
+    )
+
+    assert rc == 0, "Authentication failed"
+    assert "Ticket cache" in output, "Failed to get the TGT"
+    assert (
+        not (
+            "No Kerberos TGT granted as the server does not support this method. "
+            "Your single-sign on(SSO) experience will be affected"
+        )
+        in output
+    ), "Get the console message about TGT"
