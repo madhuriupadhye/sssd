@@ -696,6 +696,7 @@ def test_passkey__ipa_server_offline(
 @pytest.mark.topology(KnownTopology.IPA)
 @pytest.mark.builtwith(client="passkey", ipa="passkey")
 @pytest.mark.ticket(gh=6931)
+#@pytest.mark.require.with_args(passkey_requires_root)
 def test_passkey__su_with_12_mappings(
     client: Client, ipa: IPA, moduledatadir: str, testdatadir: str, umockdev_ipaotpd_update
 ):
@@ -714,7 +715,8 @@ def test_passkey__su_with_12_mappings(
         3. Not getting the message after authentication.
     :customerscenario: False
     """
-    user_add = ipa.user("user1").add(user_auth_type="passkey")
+    import pdb; pdb.set_trace()
+    user_add = ipa.user("user1").add(user_auth_type="passkey, password")
 
     for n in range(1, 13):
         with open(f"{testdatadir}/passkey-mapping.ipa{n}") as f:
@@ -739,4 +741,171 @@ def test_passkey__su_with_12_mappings(
             "Your single-sign on(SSO) experience will be affected"
         )
         in output
+    ), "Get the console message about TGT"
+
+
+@pytest.mark.importance("critical")
+@pytest.mark.topology(KnownTopology.IPA)
+@pytest.mark.builtwith(client="passkey", ipa="passkey")
+@pytest.mark.ticket(gh=6931)
+# @pytest.mark.require.with_args(passkey_requires_root)
+def test_passkey__su_no_pin_set(
+        client: Client, ipa: IPA, moduledatadir: str, testdatadir: str,
+        umockdev_ipaotpd_update
+):
+    """
+    :title: Check authentication of user with IPA server when no pin set for the Passkey
+    :setup:
+        1. Add a user with --user-auth-type=passkey in the IPA server
+        2. Modify Passkey configuration to set require user verification during authentication to false
+            # Need to check it, #ipa passkeyconfig-mod --require-user-verification=false
+        3. Setup SSSD client with FIDO and umockdev, start SSSD service
+    :steps:
+         1. Check authentication of the user when no pin set for the Passkey
+         2. Check the TGT of user
+    :expectedresults:
+        1. User authenticates successfully
+        2. Get TGT after authentication of user
+    :customerscenario: False
+    """
+    import pdb; pdb.set_trace()
+    with open(f"{testdatadir}/passkey-mapping.ipa") as f:
+        ipa.user("user1").add(user_auth_type="passkey").passkey_add(
+            f.read().strip())
+
+    ipa.host.conn.run("ipa passkeyconfig-mod --require-user-verification=False",
+                     raise_on_error=False)
+    client.sssd.start()
+
+    rc, _, output, _ = client.auth.su.passkey_with_output(
+        username="user1",
+        device=f"{moduledatadir}/umockdev.device",
+        ioctl=f"{moduledatadir}/umockdev.ioctl",
+        script=f"{testdatadir}/umockdev.script.ipa",
+        command="klist",
+        auth_method="PasskeyAuthenticationUseCases.PASSKEY_WITHOUT_PIN_WITHOUT_PROMPTS",
+    )
+
+    ipa.host.conn.run("ipa passkeyconfig-mod --require-user-verification=True",
+                     raise_on_error=False)
+
+    assert rc == 0, "Authentication failed"
+    assert "Ticket cache" in output, "Failed to get the TGT"
+    assert (
+        not (
+                "No Kerberos TGT granted as the server does not support this method. "
+                "Your single-sign on(SSO) experience will be affected"
+            )
+            in output
+    ), "Get the console message about TGT"
+
+@pytest.mark.importance("critical")
+@pytest.mark.topology(KnownTopology.IPA)
+@pytest.mark.builtwith(client="passkey", ipa="passkey")
+@pytest.mark.ticket(gh=6931)
+# @pytest.mark.require.with_args(passkey_requires_root)
+def test_passkey__prompt_options(
+        client: Client, ipa: IPA, moduledatadir: str, testdatadir: str,
+        umockdev_ipaotpd_update
+):
+    """
+    :title: Check authentication of user with IPA server when no pin set for the Passkey
+    :setup:
+        1. Add a user with --user-auth-type=passkey in the IPA server
+        2. Modify Passkey configuration to set require user verification during authentication to false
+            # Need to check it, #ipa passkeyconfig-mod --require-user-verification=false
+        3. Setup SSSD client with FIDO and umockdev, start SSSD service
+    :steps:
+         1. Check authentication of the user when no pin set for the Passkey
+         2. Check the TGT of user
+    :expectedresults:
+        1. User authenticates successfully
+        2. Get TGT after authentication of user
+    :customerscenario: False
+    """
+    with open(f"{testdatadir}/passkey-mapping.ipa") as f:
+        ipa.user("user1").add(user_auth_type="passkey").passkey_add(
+            f.read().strip())
+
+    client.sssd.section("prompting/passkey")["interactive"] = "True"
+    client.sssd.section("prompting/passkey")["interactive_prompt"] = "Please, insert the passkey and press enter"
+    client.sssd.section("prompting/passkey")["touch"] = "True"
+    client.sssd.section("prompting/passkey")["touch_prompt"] = "Please, touch the passkey"
+    client.sssd.start()
+
+    import pdb; pdb.set_trace()
+
+    rc, _, output, _ = client.auth.su.passkey_with_output(
+        username="user1",
+        device=f"{moduledatadir}/umockdev.device",
+        ioctl=f"{moduledatadir}/umockdev.ioctl",
+        script=f"{testdatadir}/umockdev.script.ipa",
+        pin=123456,
+        interactive_prompt="Please, insert the passkey and press enter",
+        touch_prompt="Please, touch the passkey",
+        command="klist",
+        auth_method="PasskeyAuthenticationUseCases.PASSKEY_WITH_PIN_AND_PROMPTS"
+    )
+
+    assert rc == 0, "Authentication failed"
+    assert "Ticket cache" in output, "Failed to get the TGT"
+    assert (
+        not (
+                "No Kerberos TGT granted as the server does not support this method. "
+                "Your single-sign on(SSO) experience will be affected"
+            )
+            in output
+    ), "Get the console message about TGT"
+
+
+@pytest.mark.importance("critical")
+@pytest.mark.topology(KnownTopology.IPA)
+@pytest.mark.builtwith(client="passkey", ipa="passkey")
+@pytest.mark.ticket(gh=7143)
+# @pytest.mark.require.with_args(passkey_requires_root)
+def test_passkey__su_fallback_to_password(
+        client: Client, ipa: IPA, moduledatadir: str, testdatadir: str,
+        umockdev_ipaotpd_update
+):
+    """
+    :title: Check authentication of user with IPA server when no pin set for the Passkey
+    :setup:
+        1. Add a user with --user-auth-type=passkey in the IPA server
+        2. Modify Passkey configuration to set require user verification during authentication to false
+            # Need to check it, #ipa passkeyconfig-mod --require-user-verification=false
+        3. Setup SSSD client with FIDO and umockdev, start SSSD service
+    :steps:
+         1. Check authentication of the user when no pin set for the Passkey
+         2. Check the TGT of user
+    :expectedresults:
+        1. User authenticates successfully
+        2. Get TGT after authentication of user
+    :customerscenario: False
+    """
+    with open(f"{testdatadir}/passkey-mapping.ipa") as f:
+        ipa.user("user1").add(user_auth_type=["passkey", "password"]).passkey_add(
+            f.read().strip())
+
+    client.sssd.start()
+
+    import pdb; pdb.set_trace()
+
+    rc, _, output, _ = client.auth.su.passkey_with_output(
+        username="user1",
+        device=f"{moduledatadir}/umockdev.device",
+        ioctl=f"{moduledatadir}/umockdev.ioctl",
+        script=f"{testdatadir}/umockdev.script.ipa",
+        pin="\\n",
+        command="klist",
+        auth_method="PasskeyAuthenticationUseCases.PASSKEY_FALLBACK_TO_PASSWORD "
+    )
+
+    assert rc == 0, "Authentication failed"
+    assert "Ticket cache" in output, "Failed to get the TGT"
+    assert (
+        not (
+                "No Kerberos TGT granted as the server does not support this method. "
+                "Your single-sign on(SSO) experience will be affected"
+            )
+            in output
     ), "Get the console message about TGT"
