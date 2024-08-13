@@ -40,6 +40,8 @@ def test_authentication__with_default_settings(
     provider.user("user1").add(password="Secret123")
 
     client.sssd.set_service_user(sssd_service_user)
+    # workaround need to delete it later
+    client.sssd.enable_responder("ssh")
     client.sssd.start()
 
     assert client.auth.parametrize(method).password("user1", "Secret123"), "User failed login!"
@@ -84,6 +86,8 @@ def test_authentication__default_settings_when_the_provider_is_offline(
     provider.user(user).add(password=correct)
 
     client.sssd.set_service_user(sssd_service_user)
+    # workaround need to delete it later
+    client.sssd.enable_responder("ssh")
     client.sssd.domain["cache_credentials"] = "True"
     client.sssd.domain["krb5_store_password_if_offline"] = "True"
     client.sssd.pam["offline_credentials_expiration"] = "0"
