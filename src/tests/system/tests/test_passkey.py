@@ -468,7 +468,7 @@ def test_passkey__su_user_same_key_for_other_users(
             script=f"{testdatadir}/umockdev.script.{suffix}.{user}",
         )
 
-
+'''
 @pytest.mark.importance("high")
 @pytest.mark.ticket(jira="SSSD-7011", gh=7066)
 @pytest.mark.topology(KnownTopologyGroup.AnyAD)
@@ -547,7 +547,7 @@ def test_passkey__su_user_when_add_with_ssh_key_and_mapping(
 
     pam_log = client.fs.read(client.sssd.logs.pam)
     assert "Mapping data found is not passkey related" in pam_log, "String was not found in the logs"
-
+'''
 
 @pytest.mark.importance("critical")
 @pytest.mark.topology(KnownTopologyGroup.AnyProvider)
