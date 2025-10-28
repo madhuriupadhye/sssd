@@ -3774,7 +3774,7 @@ class TestADParamsPorted:
                " the error is ignored." in log_str
 
     @staticmethod
-    @pytest.mark.tier1_2
+    @pytest.mark.tier2
     def test_0047_ad_parameters_filter_group(
             multihost, adjoin, create_plain_aduser_group):
         """
@@ -3793,6 +3793,8 @@ class TestADParamsPorted:
         :customerscenario: True
         :bugzilla: https://bugzilla.redhat.com/show_bug.cgi?id=1913839
         """
+
+        #expected to fail with RHEL9.0, fixed in RHEL9.3
         adjoin(membersw='adcli')
         ad_realm = multihost.ad[0].domainname.upper()
         # Create AD user and group

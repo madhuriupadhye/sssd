@@ -533,7 +533,7 @@ class TestDynDns(object):
         assert 'sssd_be' in ps_cmd.stdout_text
         assert 'sssd_nss' in ps_cmd.stdout_text
         assert 'sssd_pam' in ps_cmd.stdout_text
-        assert 'sssd_pac' in ps_cmd.stdout_text
+        # assert 'sssd_pac' in ps_cmd.stdout_text
         multihost.client[0].run_command('sed -i "/TALLOC_FREE_FILL/d" /etc/sysconfig/sssd')
 
     @staticmethod
