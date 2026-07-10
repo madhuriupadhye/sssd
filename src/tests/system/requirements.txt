@@ -1,7 +1,8 @@
 flaky
 pytest
 git+https://github.com/next-actions/pytest-importance
-git+https://github.com/next-actions/pytest-mh
+#git+https://github.com/next-actions/pytest-mh
+git+https://github.com/madhuriupadhye/pytest-mh.git@1.0.30.dev1
 git+https://github.com/next-actions/pytest-ticket
 git+https://github.com/next-actions/pytest-tier
 git+https://github.com/next-actions/pytest-output
