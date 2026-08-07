@@ -1040,9 +1040,10 @@ class TestADParamsPorted:
             f"/var/log/sssd/sssd_{multihost.ad[0].domainname.lower()}.log"). \
             decode('utf-8')
 
-        assert f"Failed to resolve server 'unresolved." \
-               f"{multihost.ad[0].domainname.lower()}': " \
-               f"Domain name not found" in log_str
+        resolve_msg = (f"Failed to resolve server 'unresolved."
+                       f"{multihost.ad[0].domainname.lower()}'")
+        assert resolve_msg in log_str, \
+            f"'{resolve_msg}' not found in sssd domain log"
         assert "Going offline" in log_str
         assert usr_cmd.returncode == 2, f"User {aduser} was found!"
 

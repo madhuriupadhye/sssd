@@ -30,16 +30,14 @@ def ssh_login(multihost, username):
     multihost.client[0].run_command(cmd, raiseonerr=False)
     try:
         client.login()
-    except SSHLoginException:
-        return 'failed'
-    except pexpect.EOF:
+    except (SSHLoginException, pexpect.EOF):
         time.sleep(1)
         log_str = multihost.client[0].get_file_contents('/var/log/secure').decode('utf-8')
         patt = re.compile(r'Access.*denied for user')
         if patt.search(log_str):
             return 'denied present'
         else:
-            return 'denied missing'
+            return 'failed'
     else:
         (stdout, _) = client.command(f'id {username}')
         client.logout()
@@ -270,6 +268,7 @@ class TestAccessControl(object):
                        'simple_allow_groups': f'{l1_grp}@{domain_name}'}
         tools.sssd_conf(dom_section, sssd_params, action='add')
         tools.clear_sssd_cache()
+        multihost.client[0].run_command(f'id {aduser}@{domain_name}', raiseonerr=False)
         ret = ssh_login(multihost, f'{aduser}@{domain_name}')
         assert ret == 'Success', 'ADuser log in failed'
 
